@@ -25,21 +25,44 @@ async function supabaseGet(table) {
   try {
     // 1. Get from local Dexie first (Always works, even offline)
     const localData = await db.table(table).toArray();
-    
-    // 2. If we are online, try to refresh from Supabase and update local cache
-    if (navigator.onLine) {
+
+    // 2. If online AND local cache is empty → fetch from Supabase synchronously (first load)
+    if (navigator.onLine && localData.length === 0) {
+      const { data, error } = await supabase.from(table).select("*");
+      if (!error && data && data.length > 0) {
+        // Cache remotely fetched data into Dexie for next time
+        try {
+          await db.table(table).bulkAdd(data.map(item => ({ ...item, synced: 1 })));
+        } catch (bulkErr) {
+          // Ignore duplicate key errors on bulk add
+        }
+        return data;
+      }
+      return localData; // Empty from both sources
+    }
+
+    // 3. If online and we already have local data → background refresh for config tables
+    if (navigator.onLine && localData.length > 0) {
       supabase.from(table).select("*").then(async ({ data, error }) => {
         if (!error && data) {
-          // Sync remote to local cache (Overwrite config tables, merge for logs if needed)
-          // For config tables (questions, teachers, etc.), overwrite is safer.
           const configTables = ["questions", "typing_texts", "buggy_codes", "teachers", "quiz_settings"];
           if (configTables.includes(table)) {
             await db.table(table).clear();
             await db.table(table).bulkAdd(data.map(item => ({ ...item, synced: 1 })));
+          } else {
+            // For result/log tables: merge new remote records into local cache
+            const localIds = new Set(localData.map(r => r.id));
+            const newRemote = data.filter(r => !localIds.has(r.id));
+            if (newRemote.length > 0) {
+              try {
+                await db.table(table).bulkAdd(newRemote.map(item => ({ ...item, synced: 1 })));
+              } catch (e) { /* ignore */ }
+            }
           }
         }
       });
     }
+
     return localData;
   } catch (err) {
     console.error(`Error in supabaseGet for ${table}:`, err);
