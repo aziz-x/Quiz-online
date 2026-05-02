@@ -380,6 +380,77 @@ function ParticlesBg({ isDarkMode }) {
   return <canvas ref={canvasRef} style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 0 }} />;
 }
 
+// ─── CONFIRM MODAL ───────────────────────────────────────────────────────────────
+function ConfirmModal({ isOpen, icon, title, description, confirmLabel, confirmColor, onConfirm, onCancel }) {
+  if (!isOpen) return null;
+  return (
+    <div style={{
+      position: "fixed", inset: 0, zIndex: 99999,
+      display: "flex", alignItems: "center", justifyContent: "center",
+      background: "rgba(0,0,0,0.65)",
+      backdropFilter: "blur(8px)",
+      animation: "fadeIn 0.2s ease"
+    }}>
+      <div style={{
+        background: "var(--bg-card)",
+        border: "2px solid var(--border-color)",
+        borderRadius: "1.75rem",
+        padding: "2.5rem 2.25rem 2rem",
+        width: "100%",
+        maxWidth: "420px",
+        boxShadow: "0 30px 80px rgba(0,0,0,0.5)",
+        textAlign: "center",
+        animation: "scaleIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)"
+      }}>
+        <div style={{ fontSize: "3.5rem", marginBottom: "1rem" }}>{icon}</div>
+        <h3 style={{ color: "var(--text-primary)", fontWeight: 900, fontSize: "1.4rem", marginBottom: "0.6rem" }}>{title}</h3>
+        <p style={{ color: "var(--text-secondary)", fontSize: "1rem", lineHeight: 1.6, marginBottom: "2rem" }}>{description}</p>
+        <div style={{ display: "flex", gap: "0.75rem", justifyContent: "center" }}>
+          <button
+            onClick={onCancel}
+            style={{
+              padding: "0.85rem 2rem",
+              borderRadius: "1rem",
+              border: "2px solid var(--border-color)",
+              background: "var(--input-bg)",
+              color: "var(--text-primary)",
+              fontSize: "1rem",
+              fontWeight: 700,
+              cursor: "pointer",
+              transition: "all 0.2s ease",
+              flex: 1
+            }}
+            onMouseOver={e => { e.currentTarget.style.borderColor = "var(--text-accent)"; e.currentTarget.style.transform = "translateY(-2px)"; }}
+            onMouseOut={e => { e.currentTarget.style.borderColor = "var(--border-color)"; e.currentTarget.style.transform = "translateY(0)"; }}
+          >
+            ✕ Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            style={{
+              padding: "0.85rem 2rem",
+              borderRadius: "1rem",
+              border: "none",
+              background: confirmColor || "linear-gradient(135deg,#ef4444,#b91c1c)",
+              color: "white",
+              fontSize: "1rem",
+              fontWeight: 800,
+              cursor: "pointer",
+              boxShadow: `0 8px 20px ${(confirmColor || "#ef4444")}50`,
+              transition: "all 0.2s ease",
+              flex: 1
+            }}
+            onMouseOver={e => { e.currentTarget.style.transform = "translateY(-2px) scale(1.02)"; e.currentTarget.style.boxShadow = `0 15px 35px ${(confirmColor || "#ef4444")}60`; }}
+            onMouseOut={e => { e.currentTarget.style.transform = "translateY(0) scale(1)"; e.currentTarget.style.boxShadow = `0 8px 20px ${(confirmColor || "#ef4444")}50`; }}
+          >
+            {confirmLabel || "✓ Confirm"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── TEACHER LOGIN ─────────────────────────────────────────────────────────────
 function TeacherLogin({ onLogin, onBack }) {
   const [form, setForm] = useState({ username: "", password: "" });
@@ -530,6 +601,11 @@ function TeacherDashboard({ teacher, onLogout, quizLimits, setQuizLimits, locked
   const [filterLevel, setFilterLevel] = useState("all");
   const [searchQ, setSearchQ] = useState("");
   const [toast, setToast] = useState(null);
+  const [confirmModal, setConfirmModal] = useState(null);
+
+  const showConfirm = ({ icon, title, description, confirmLabel, confirmColor, onConfirm }) => {
+    setConfirmModal({ icon, title, description, confirmLabel, confirmColor, onConfirm });
+  };
   const [tempLimits, setTempLimits] = useState({ 
     easy: Math.floor(quizLimits.easy / 60), 
     normal: Math.floor(quizLimits.normal / 60), 
@@ -677,31 +753,52 @@ function TeacherDashboard({ teacher, onLogout, quizLimits, setQuizLimits, locked
     reload(); showToast("Teacher deleted."); 
   };
 
-  const resetStats = async () => {
-    if (!window.confirm("Are you sure you want to clear ALL results and logs?")) return;
-    await Promise.all([
-      supabase.from(TABLES.studentLogs).delete().neq("id", -1),
-      supabase.from(TABLES.quizResults).delete().neq("id", -1),
-      supabase.from(TABLES.typingResults).delete().neq("id", -1),
-      supabase.from(TABLES.codeResults).delete().neq("id", -1)
-    ]);
-    reload(); showToast("All statistics reset!");
+  const resetStats = () => {
+    showConfirm({
+      icon: "🗑️",
+      title: "Reset All Statistics",
+      description: "This will permanently delete ALL quiz results, typing results, code results, and student logs. This action cannot be undone.",
+      confirmLabel: "🗑 Yes, Reset All",
+      confirmColor: "#ef4444",
+      onConfirm: async () => {
+        setConfirmModal(null);
+        await Promise.all([
+          supabase.from(TABLES.studentLogs).delete().neq("id", -1),
+          supabase.from(TABLES.quizResults).delete().neq("id", -1),
+          supabase.from(TABLES.typingResults).delete().neq("id", -1),
+          supabase.from(TABLES.codeResults).delete().neq("id", -1),
+          db.table(TABLES.studentLogs).clear(),
+          db.table(TABLES.quizResults).clear(),
+          db.table(TABLES.typingResults).clear(),
+          db.table(TABLES.codeResults).clear(),
+        ]);
+        reload();
+        showToast("All statistics reset!");
+      }
+    });
   };
 
-  const deleteStudentLogs = async () => {
-    if (!window.confirm("Are you sure you want to clear ALL student logs? This cannot be undone.")) return;
-    try {
-      // Delete from Supabase
-      const { error } = await supabase.from(TABLES.studentLogs).delete().neq("id", -1);
-      if (error) throw error;
-      // Also clear local Dexie cache
-      await db.table(TABLES.studentLogs).clear();
-      reload();
-      showToast("Student logs cleared!");
-    } catch (err) {
-      console.error("Error clearing logs:", err);
-      showToast("Error clearing logs", "error");
-    }
+  const deleteStudentLogs = () => {
+    showConfirm({
+      icon: "👥",
+      title: "Clear Student Logs",
+      description: "This will permanently delete all student login records. Quiz and test results will not be affected.",
+      confirmLabel: "🗑 Yes, Clear Logs",
+      confirmColor: "#ef4444",
+      onConfirm: async () => {
+        setConfirmModal(null);
+        try {
+          const { error } = await supabase.from(TABLES.studentLogs).delete().neq("id", -1);
+          if (error) throw error;
+          await db.table(TABLES.studentLogs).clear();
+          reload();
+          showToast("Student logs cleared!");
+        } catch (err) {
+          console.error("Error clearing logs:", err);
+          showToast("Error clearing logs", "error");
+        }
+      }
+    });
   };
 
   const handleExportAll = () => {
@@ -913,6 +1010,16 @@ function TeacherDashboard({ teacher, onLogout, quizLimits, setQuizLimits, locked
 
   return (
     <div style={{ minHeight: "100vh", position: "relative", zIndex: 1 }}>
+      <ConfirmModal
+        isOpen={!!confirmModal}
+        icon={confirmModal?.icon}
+        title={confirmModal?.title}
+        description={confirmModal?.description}
+        confirmLabel={confirmModal?.confirmLabel}
+        confirmColor={confirmModal?.confirmColor}
+        onConfirm={confirmModal?.onConfirm}
+        onCancel={() => setConfirmModal(null)}
+      />
       {toast && <div style={{ 
         position: "fixed", 
         top: "1.25rem", 
