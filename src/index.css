@@ -1,0 +1,456 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+::-webkit-scrollbar {
+  @apply hidden
+}
+
+* {
+  font-family: Outfit;
+}
+
+html {
+  background-image: linear-gradient(to right,
+      #111827,
+      /* من اللون gray-900 */
+      #1f2937
+      /* إلى اللون gray-800 */
+    );
+
+
+}
+
+.bg-g {
+  background: #617ba31e
+}
+
+.bg-g:hover {
+  background: #617ba33d
+}
+
+.rxr {
+  transform: scale(0.7);
+}
+
+.zmodel {
+  z-index: 1000;
+}
+
+.ReactModal__Overlay {
+  z-index: 1000;
+  backdrop-filter: blur(3px);
+
+}
+
+@media print {
+  @page {
+    size: auto;
+    /* يترك الحجم حسب المحتوى */
+    margin: 0;
+    /* يزيل الهوامش الافتراضية */
+  }
+
+  body {
+    margin: 0;
+    padding: 0;
+  }
+
+  .prescription-container {
+    /* يجعل الحاوية كلها في صفحة واحدة */
+    page-break-after: avoid;
+    page-break-before: avoid;
+    page-break-inside: avoid;
+    /* يضبط ارتفاعها لتملأ صفحة الطباعة بالكامل */
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  img {
+    /* يمنع انقسام الصورة على صفحتين */
+    page-break-inside: avoid;
+  }
+}
+
+/* الأساسية: العرض بنسبة 90%، حشوة وزوايا مدورة */
+.modal-content {
+  background-color: #1f2937;
+  /* مثال: bg-gray-800 */
+  color: #f9fafb;
+  /* مثال: text-white */
+  border-radius: 0.5rem;
+  /* 8px */
+  padding: 1rem;
+  /* 16px داخلياً */
+  max-height: 100vh;
+  /* لا يزيد ارتفاعه عن 90% من ارتفاع الشاشة */
+  overflow-y: auto;
+  /* عند طول المحتوى يسمح بالتمرير عمودياً */
+  margin: auto;
+  /* يتمركز أفقياً */
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1),
+    0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  /* لضمان أن المودال لا يخرج من الإطار */
+  position: relative;
+}
+
+.modal-content2 {
+  color: #f9fafb;
+  width: 60%;
+  border-radius: 0.5rem;
+  /* 8px */
+  padding: 1rem;
+  /* 16px داخلياً */
+  max-height: 100vh;
+  /* لا يزيد ارتفاعه عن 90% من ارتفاع الشاشة */
+  overflow-y: auto;
+  /* عند طول المحتوى يسمح بالتمرير عمودياً */
+  margin: auto;
+  /* يتمركز أفقياً */
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1),
+    0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  /* لضمان أن المودال لا يخرج من الإطار */
+  position: relative;
+}
+
+/* 
+  على شاشات ≥ 640px (sm)، نُوسّع الحد الأقصى للعرض قليلاً 
+  (مثلاً 32rem = 512px)
+*/
+@media (min-width: 640px) {
+  .modal-content {
+    width: 80%;
+    max-width: 32rem;
+    /* 512px */
+  }
+
+}
+
+
+/* 
+  على شاشات ≥ 1024px (lg)، نضع حد أقصى للعرض أكبر 
+  (مثلاً 56rem = 896px)
+*/
+@media (min-width: 1024px) {
+  .modal-content {
+    width: 75%;
+    max-width: 56rem;
+    /* 896px */
+  }
+}
+
+/* 
+  على شاشات ﹥ 1280px (xl)، يمكننا زيادة الحد الأقصى مرة أخرى 
+  إذا أردت مودالاً أوسع قليلاً
+*/
+
+
+@media (min-width: 556px) {
+  .humansave {
+    /* نلغي التحويل تمامًا */
+    transform: none;
+
+    /* نعيد الموضع ليناسب شاشات التابلت/الحاسوب.
+       يمكنك ضبط القيم حسب التصميم المطلوب. */
+    top: 20px;
+    right: 30px;
+  }
+
+  .humanpanel {
+    transform: none;
+    top: 50px;
+    left: 20px;
+    overflow: visible;
+  }
+}
+
+@media (max-width: 555px) {
+  .humansave {
+    top: 0;
+    right: -100px;
+    position: fixed;
+    transform: scale(0.5);
+  }
+
+  .humanpanel {
+    transform: scale(0.5);
+    overflow: hidden;
+    top: -100px;
+    left: -20px;
+  }
+
+}
+
+/* .content{
+    position: relative;
+    width: 70%;
+    left: 200px;
+    top: 70px;
+}
+.con{
+    width: calc(100% - 250px);
+    padding-bottom: 100px;
+} */
+.react-datepicker-wrapper {
+  width: 100%;
+  /* إزالة أي تأثير للشكل الافتراضي */
+}
+
+
+@keyframes spinSlow {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.sha {
+  box-shadow: rgba(0, 0, 0, 0.56) 0px 22px 70px 4px;
+}
+
+.modal-content {
+  /* تصميم محتوى ال modal */
+  background-color: rgb(31 41 55);
+  /* مثال: خلفية Modal داكنة */
+  padding: 20px;
+  width: 100%;
+  border-radius: 8px;
+}
+
+.zmodelf {
+  z-index: 1001;
+}
+
+.shad {
+  background-color: rgba(27, 37, 52, 0.616);
+  box-shadow: inset 0 9px 15px -12px rgba(0, 0, 0, 0.863), inset 0 -9px 20px -15px rgba(0, 0, 0, 0.92);
+}
+
+.pr {
+  z-index: 1000;
+}
+
+.gray:hover {
+  background-color: #4c5f6711;
+}
+
+.gray {
+  border-bottom: 1px solid rgba(119, 119, 119, 0.082);
+
+}
+
+.modal-overlay {
+  /* تصميم خلفية ال modal */
+  background-color: rgba(0, 0, 0, 0.5);
+  /* مثال: خلفية شفافة */
+  position: fixed;
+  top: 0;
+  left: 0;
+
+  right: 0;
+  bottom: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: white;
+}
+
+.w-nav {
+  width: calc(100% - 225px);
+}
+
+.bg-gray {
+  z-index: 0;
+  /* زجاجي شفاف */
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  overflow: hidden;
+  /* لإخفاء الفائض من pseudo-element */
+}
+
+/* pseudo-element للخلفية الملونة والمضببة */
+.bg-gray::before {
+  content: "";
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(45deg,
+      #009bf5,
+      /* وردي شفاف */
+      #48536b,
+      /* أزرق سماوي */
+      #487e6a
+      /* أخضر فاتح */
+    );
+  filter: blur(100px);
+  opacity: 0.7;
+  z-index: -1;
+}
+
+
+
+
+
+.checkbox-wrapper-10 .tgl {
+  display: none;
+}
+
+.checkbox-wrapper-10 .tgl,
+.checkbox-wrapper-10 .tgl:after,
+.checkbox-wrapper-10 .tgl:before,
+.checkbox-wrapper-10 .tgl *,
+.checkbox-wrapper-10 .tgl *:after,
+.checkbox-wrapper-10 .tgl *:before,
+.checkbox-wrapper-10 .tgl+.tgl-btn {
+  box-sizing: border-box;
+}
+
+.checkbox-wrapper-10 .tgl::-moz-selection,
+.checkbox-wrapper-10 .tgl:after::-moz-selection,
+.checkbox-wrapper-10 .tgl:before::-moz-selection,
+.checkbox-wrapper-10 .tgl *::-moz-selection,
+.checkbox-wrapper-10 .tgl *:after::-moz-selection,
+.checkbox-wrapper-10 .tgl *:before::-moz-selection,
+.checkbox-wrapper-10 .tgl+.tgl-btn::-moz-selection,
+.checkbox-wrapper-10 .tgl::selection,
+.checkbox-wrapper-10 .tgl:after::selection,
+.checkbox-wrapper-10 .tgl:before::selection,
+.checkbox-wrapper-10 .tgl *::selection,
+.checkbox-wrapper-10 .tgl *:after::selection,
+.checkbox-wrapper-10 .tgl *:before::selection,
+.checkbox-wrapper-10 .tgl+.tgl-btn::selection {
+  background: none;
+}
+
+.checkbox-wrapper-10 .tgl+.tgl-btn {
+  outline: 0;
+  display: block;
+  width: 4em;
+  height: 2em;
+  position: relative;
+  cursor: pointer;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+.checkbox-wrapper-10 .tgl+.tgl-btn:after,
+.checkbox-wrapper-10 .tgl+.tgl-btn:before {
+  position: relative;
+  display: block;
+  content: "";
+  width: 50%;
+  height: 100%;
+}
+
+.checkbox-wrapper-10 .tgl+.tgl-btn:after {
+  left: 0;
+}
+
+.checkbox-wrapper-10 .tgl+.tgl-btn:before {
+  display: none;
+}
+
+.checkbox-wrapper-10 .tgl:checked+.tgl-btn:after {
+  left: 50%;
+}
+
+.checkbox-wrapper-10 .tgl-flip+.tgl-btn {
+  padding: 2px;
+  transition: all 0.2s ease;
+  font-family: sans-serif;
+  perspective: 100px;
+}
+
+.checkbox-wrapper-10 .tgl-flip+.tgl-btn:after,
+.checkbox-wrapper-10 .tgl-flip+.tgl-btn:before {
+  display: inline-block;
+  transition: all 0.4s ease;
+  width: 100%;
+  text-align: center;
+  position: absolute;
+  line-height: 2em;
+  font-weight: bold;
+  color: #fff;
+  position: absolute;
+  top: 0;
+  left: 0;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  border-radius: 4px;
+}
+
+.checkbox-wrapper-10 .tgl-flip+.tgl-btn:after {
+  content: attr(data-tg-on);
+  background: #02C66F;
+  transform: rotateY(-180deg);
+}
+
+.checkbox-wrapper-10 .tgl-flip+.tgl-btn:before {
+  background: #FF3A19;
+  content: attr(data-tg-off);
+}
+
+.checkbox-wrapper-10 .tgl-flip+.tgl-btn:active:before {
+  transform: rotateY(-20deg);
+}
+
+.checkbox-wrapper-10 .tgl-flip:checked+.tgl-btn:before {
+  transform: rotateY(180deg);
+}
+
+.checkbox-wrapper-10 .tgl-flip:checked+.tgl-btn:after {
+  transform: rotateY(0);
+  left: 0;
+  background: #7FC6A6;
+}
+
+.checkbox-wrapper-10 .tgl-flip:checked+.tgl-btn:active:after {
+  transform: rotateY(20deg);
+}
+
+.bg-gr {
+  background-image: linear-gradient(to right,
+      #111827,
+      /* من اللون gray-900 */
+      #1f2937
+      /* إلى اللون gray-800 */
+    );
+}
+
+@media (max-width: 640px) {
+
+  .modal-content2 {
+    width: 100%;
+
+  }
+}
+
+/* Teacher Dashboard Input & Select Focus Effects */
+.teacher-input:focus,
+.teacher-select:focus {
+  border-color: #8b5cf6 !important;
+  box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.15) !important;
+  background: var(--bg-card) !important;
+  transform: translateY(-1px);
+}
+
+.teacher-input:hover,
+.teacher-select:hover {
+  border-color: rgba(139, 92, 246, 0.5) !important;
+  background: var(--bg-card) !important;
+}
+
+.teacher-select option {
+  background: #1f2937;
+  /* Darker bg for options */
+  color: white;
+  padding: 10px;
+}
