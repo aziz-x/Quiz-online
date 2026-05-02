@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useContext } from "react";
 import { supabase } from "./lib/supabase";
-import { db } from "./lib/offlineDb";
+import { db, syncOfflineData } from "./lib/offlineDb";
 import useExamSecurity from "./hooks/useExamSecurity";
 import { ThemeContext } from "./context/ThemeContext";
 import * as XLSX from "xlsx";
@@ -18,25 +18,32 @@ const TABLES = {
   quizSettings: "quiz_settings",
 };
 
+// Sync startup
+syncOfflineData();
+
 async function supabaseGet(table) {
   try {
-    // Try to get from local Dexie first
+    // 1. Get from local Dexie first (Always works, even offline)
     const localData = await db.table(table).toArray();
     
-    // If we are online, try to refresh from Supabase
+    // 2. If we are online, try to refresh from Supabase and update local cache
     if (navigator.onLine) {
-      const { data, error } = await supabase.from(table).select("*");
-      if (!error && data) {
-        // Sync remote to local (overwrite configuration tables, merge results)
-        await db.table(table).clear();
-        await db.table(table).bulkAdd(data.map(item => ({ ...item, synced: 1 })));
-        return data;
-      }
+      supabase.from(table).select("*").then(async ({ data, error }) => {
+        if (!error && data) {
+          // Sync remote to local cache (Overwrite config tables, merge for logs if needed)
+          // For config tables (questions, teachers, etc.), overwrite is safer.
+          const configTables = ["questions", "typing_texts", "buggy_codes", "teachers", "quiz_settings"];
+          if (configTables.includes(table)) {
+            await db.table(table).clear();
+            await db.table(table).bulkAdd(data.map(item => ({ ...item, synced: 1 })));
+          }
+        }
+      });
     }
     return localData;
   } catch (err) {
     console.error(`Error in supabaseGet for ${table}:`, err);
-    return null;
+    return [];
   }
 }
 
@@ -44,8 +51,11 @@ async function supabaseInsert(table, row) {
   try {
     const isOnline = navigator.onLine;
     const localRow = { ...row, synced: isOnline ? 1 : 0 };
+    
+    // Save locally first (Reliability)
     const id = await db.table(table).add(localRow);
     
+    // If online, try to push to Supabase
     if (isOnline) {
       const { data, error } = await supabase.from(table).insert([row]).select();
       if (error) {
@@ -515,33 +525,29 @@ function TeacherDashboard({ teacher, onLogout, quizLimits, setQuizLimits, locked
     showToast("Refreshing data...", "info");
     try {
       const [qs, ts, cs, tchs, qRes, tRes, cRes, logs] = await Promise.all([
-        supabase.from(TABLES.questions).select("*").order("id", { ascending: false }),
-        supabase.from(TABLES.typingTexts).select("*").order("id", { ascending: false }),
-        supabase.from(TABLES.buggyCode).select("*").order("id", { ascending: false }),
-        supabase.from(TABLES.teachers).select("*").order("id", { ascending: false }),
-        supabase.from(TABLES.quizResults).select("*").order("timestamp", { ascending: false }),
-        supabase.from(TABLES.typingResults).select("*").order("timestamp", { ascending: false }),
-        supabase.from(TABLES.codeResults).select("*").order("timestamp", { ascending: false }),
-        supabase.from(TABLES.studentLogs).select("*").order("login_time", { ascending: false })
+        supabaseGet(TABLES.questions),
+        supabaseGet(TABLES.typingTexts),
+        supabaseGet(TABLES.buggyCode),
+        supabaseGet(TABLES.teachers),
+        supabaseGet(TABLES.quizResults),
+        supabaseGet(TABLES.typingResults),
+        supabaseGet(TABLES.codeResults),
+        supabaseGet(TABLES.studentLogs)
       ]);
 
-      if (qs.error || ts.error || cs.error || tchs.error || qRes.error || tRes.error || cRes.error || logs.error) {
-        throw new Error("One or more tables failed to load");
-      }
-
-      setQuestions(qs.data || []);
-      setTypingTexts(ts.data || []);
-      setBuggyCode(cs.data || []);
-      setTeachers(tchs.data || []);
-      setQuizResults(qRes.data || []);
-      setTypingResults(tRes.data || []);
-      setCodeResults(cRes.data || []);
-      setStudentLogs(logs.data || []);
+      setQuestions(qs || []);
+      setTypingTexts(ts || []);
+      setBuggyCode(cs || []);
+      setTeachers(tchs || []);
+      setQuizResults(qRes || []);
+      setTypingResults(tRes || []);
+      setCodeResults(cRes || []);
+      setStudentLogs(logs || []);
       
-      showToast("Data updated successfully!");
+      showToast("Data loaded (Syncing in background...)");
     } catch (err) {
       console.error("Reload error:", err);
-      showToast("Failed to refresh data. Please check your connection.", "error");
+      showToast("Offline mode: Loading local data", "warning");
     }
   }, []);
 
@@ -2953,27 +2959,7 @@ export default function App() {
         {isDarkMode ? "☀️" : "🌙"}
       </button>
 
-      {/* Connectivity Indicator */}
-      <div style={{
-        position: "fixed",
-        bottom: "1.5rem",
-        left: "1.5rem",
-        zIndex: 9999,
-        padding: "0.5rem 1rem",
-        borderRadius: "999px",
-        background: isOnline ? "rgba(34,197,94,0.2)" : "rgba(239,68,68,0.2)",
-        border: `1px solid ${isOnline ? "#22c55e" : "#ef4444"}`,
-        color: isOnline ? "#22c55e" : "#ef4444",
-        fontSize: "0.85rem",
-        fontWeight: 700,
-        display: "flex",
-        alignItems: "center",
-        gap: "0.5rem",
-        backdropFilter: "blur(8px)"
-      }}>
-        <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: isOnline ? "#22c55e" : "#ef4444" }}></div>
-        {isOnline ? "Online (Synced)" : "Offline (Local Mode)"}
-      </div>
+
 
       <ParticlesBg isDarkMode={isDarkMode} />
       {screen === "login" && <LoginScreen onLogin={handleLogin} onTeacher={() => setScreen("teacherLogin")} />}

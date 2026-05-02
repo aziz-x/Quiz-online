@@ -4,17 +4,13 @@
   "homepage": "https://aziz-x.github.io/Quiz-online/",
   "version": "1.0.0",
   "type": "module",
-  "main": "electron/main.cjs",
   "scripts": {
     "dev": "vite",
     "predeploy": "npm run build",
     "deploy": "gh-pages -d dist",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview",
-    "electron:dev": "concurrently \"npm run dev\" \"wait-on http://localhost:5173 && cross-env NODE_ENV=development electron .\"",
-    "electron:build": "npm run build && electron-builder",
-    "dist": "npm run build && electron-builder"
+    "preview": "vite preview"
   },
   "dependencies": {
     "@casl/ability": "^6.7.3",
@@ -84,10 +80,6 @@
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^4.3.3",
     "autoprefixer": "^10.4.20",
-    "concurrently": "^9.1.0",
-    "cross-env": "^7.0.3",
-    "electron": "^33.2.1",
-    "electron-builder": "^25.1.8",
     "eslint": "^9.13.0",
     "eslint-plugin-react": "^7.37.2",
     "eslint-plugin-react-hooks": "^5.0.0",
@@ -96,29 +88,7 @@
     "globals": "^15.11.0",
     "postcss": "^8.4.47",
     "tailwindcss": "^3.4.14",
-    "vite": "^5.4.10",
-    "wait-on": "^8.0.1"
-  },
-  "build": {
-    "appId": "com.quiz.online",
-    "productName": "IT Quiz Pro",
-    "directories": {
-      "output": "release"
-    },
-    "files": [
-      "dist/**/*",
-      "electron/**/*",
-      "package.json"
-    ],
-    "win": {
-      "target": "nsis",
-      "icon": "public/icon.png"
-    },
-    "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true,
-      "createDesktopShortcut": true
-    }
+    "vite": "^5.4.10"
   }
 }
 
