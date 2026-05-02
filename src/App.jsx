@@ -547,30 +547,69 @@ function TeacherDashboard({ teacher, onLogout, quizLimits, setQuizLimits, locked
   const reload = useCallback(async () => {
     showToast("Refreshing data...", "info");
     try {
-      const [qs, ts, cs, tchs, qRes, tRes, cRes, logs] = await Promise.all([
+      // Config tables: use cache-first (supabaseGet)
+      const [qs, ts, cs, tchs] = await Promise.all([
         supabaseGet(TABLES.questions),
         supabaseGet(TABLES.typingTexts),
         supabaseGet(TABLES.buggyCode),
         supabaseGet(TABLES.teachers),
-        supabaseGet(TABLES.quizResults),
-        supabaseGet(TABLES.typingResults),
-        supabaseGet(TABLES.codeResults),
-        supabaseGet(TABLES.studentLogs)
       ]);
+
+      // Result/log tables: always fetch fresh from Supabase for the teacher dashboard
+      // so data is always up-to-date regardless of local Dexie cache
+      let qRes = [], tRes = [], cRes = [], logs = [];
+      if (navigator.onLine) {
+        const [qR, tR, cR, lg] = await Promise.all([
+          supabase.from(TABLES.quizResults).select("*").order("timestamp", { ascending: false }),
+          supabase.from(TABLES.typingResults).select("*").order("timestamp", { ascending: false }),
+          supabase.from(TABLES.codeResults).select("*").order("timestamp", { ascending: false }),
+          supabase.from(TABLES.studentLogs).select("*").order("login_time", { ascending: false }),
+        ]);
+        qRes = qR.data || [];
+        tRes = tR.data || [];
+        cRes = cR.data || [];
+        logs = lg.data || [];
+
+        // Update local Dexie cache with fresh data
+        const resultTables = [
+          [TABLES.quizResults, qRes],
+          [TABLES.typingResults, tRes],
+          [TABLES.codeResults, cRes],
+          [TABLES.studentLogs, logs],
+        ];
+        for (const [tbl, remoteData] of resultTables) {
+          try {
+            const localIds = new Set((await db.table(tbl).toArray()).map(r => r.id));
+            const newItems = remoteData.filter(r => !localIds.has(r.id));
+            if (newItems.length > 0) {
+              await db.table(tbl).bulkAdd(newItems.map(r => ({ ...r, synced: 1 })));
+            }
+          } catch (e) { /* ignore duplicate errors */ }
+        }
+      } else {
+        // Offline: fall back to local Dexie
+        [qRes, tRes, cRes, logs] = await Promise.all([
+          supabaseGet(TABLES.quizResults),
+          supabaseGet(TABLES.typingResults),
+          supabaseGet(TABLES.codeResults),
+          supabaseGet(TABLES.studentLogs),
+        ]);
+      }
 
       setQuestions(qs || []);
       setTypingTexts(ts || []);
       setBuggyCode(cs || []);
       setTeachers(tchs || []);
-      setQuizResults(qRes || []);
-      setTypingResults(tRes || []);
-      setCodeResults(cRes || []);
-      setStudentLogs(logs || []);
-      
-      showToast("Data loaded (Syncing in background...)");
+      setQuizResults(qRes);
+      setTypingResults(tRes);
+      setCodeResults(cRes);
+      // Sort newest first
+      setStudentLogs([...logs].sort((a, b) => new Date(b.login_time) - new Date(a.login_time)));
+
+      showToast(navigator.onLine ? "Data refreshed from database!" : "Offline mode: Loaded local data");
     } catch (err) {
       console.error("Reload error:", err);
-      showToast("Offline mode: Loading local data", "warning");
+      showToast("Error loading data", "error");
     }
   }, []);
 
@@ -651,9 +690,18 @@ function TeacherDashboard({ teacher, onLogout, quizLimits, setQuizLimits, locked
 
   const deleteStudentLogs = async () => {
     if (!window.confirm("Are you sure you want to clear ALL student logs? This cannot be undone.")) return;
-    const { error } = await supabase.from(TABLES.studentLogs).delete().neq("id", -1);
-    if (error) { showToast("Error clearing logs", "error"); }
-    else { reload(); showToast("Student logs cleared!"); }
+    try {
+      // Delete from Supabase
+      const { error } = await supabase.from(TABLES.studentLogs).delete().neq("id", -1);
+      if (error) throw error;
+      // Also clear local Dexie cache
+      await db.table(TABLES.studentLogs).clear();
+      reload();
+      showToast("Student logs cleared!");
+    } catch (err) {
+      console.error("Error clearing logs:", err);
+      showToast("Error clearing logs", "error");
+    }
   };
 
   const handleExportAll = () => {
